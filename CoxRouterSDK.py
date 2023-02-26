@@ -591,63 +591,39 @@ class Gateway:
                           will return the first device with a name containing
                           this substring. (not case sensitive.)
         """
-        dev = Device()
-
+        
+        # dev = None
         if not self.has_session():
             print(" You are unauthorized, start by authenticating.")
             return dev
 
         q_key = ''
         value = None
-        if ipv4:
-            q_key = 'ipv4'
-            value = ipv4
-        elif ipv6:
-            q_key = 'ipv6'
-            value = ipv6
-        elif name:
-            q_key = 'name'
-            value = name
-        elif mac:
-            q_key = 'mac'
-            value = mac
+        
 
-        device_list = []
         devices = self.devices()
 
-        for d in devices['online']:
-            d['connected'] = True
-            device_list.append(d)
-
-        for d in devices['offline']:
-            d['connected'] = False
-            device_list.append(d)
-
-        for d in device_list:
-            # Either filter by partial name
-            if part_name is not None:
-                # Check if the lowercased device name contains
-                # the lwoercased filter substring
-                if part_name.lower() in d['name'].lower():
-                    dev.name = d['name']
-                    dev.network = d['network']
-                    dev.lease_type = d['lease_type']
-                    dev.ipv4 = d['ipv4']
-                    dev.ipv6 = d['ipv6']
-                    dev.mac = d['mac']
-                    dev.connected = d['connected']
+        for d in devices:
+            if ipv4:
+                if d.ipv4 == ipv4:
+                    dev = d
                     break
-
-            # Or exactly one of the keys
-            elif d[q_key] == value:
-                dev.name = d['name']
-                dev.network = d['network']
-                dev.lease_type = d['lease_type']
-                dev.ipv4 = d['ipv4']
-                dev.ipv6 = d['ipv6']
-                dev.mac = d['mac']
-                dev.connected = d['connected']
-                break
+            elif ipv6:
+                if d.ipv6 == ipv6:
+                    dev = d
+                    break
+            elif name:
+                if d.name == ipv6:
+                    dev = d
+                    break
+            elif mac:
+                if d.mac == mac:
+                    dev = d
+                    break
+            elif part_name:
+                if part_name.lower() in d.name.lower():
+                    dev = d
+                    break
 
         return dev
 

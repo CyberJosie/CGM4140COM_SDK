@@ -136,39 +136,65 @@ def main(args) -> None:
     if args.list_devices is not None and args.list_devices is not False:
         print(' Getting all devices...')
         gw.authenticate(username, password)
+        something_happened = True
         result = get_all_devices(gw)
         print(result)
-        something_happened = True
 
     # List online devices
     elif args.connected is not None and args.connected is not False:
         print(' Getting connected devices...')
         gw.authenticate(username, password)
+        something_happened = True
         result = get_online_devices(gw)
         print(result)
-        something_happened = True
 
     # List offline devices
     elif args.disconnected is not None and args.disconnected is not False:
         print(' Getting disconnected devices...')
         gw.authenticate(username, password)
+        something_happened = True
         result = get_offline_devices(gw)
         print(result)
-        something_happened = True
 
+    # Network setup
     elif args.net_setup is not None and args.net_setup is not False:
         print(' Getting network setup information...')
         gw.authenticate(username, password)
+        something_happened = True
         result = get_network_setup_info(gw)
         print(result)
-        something_happened = True
 
+    # Connection status
     elif args.conn_status is not None and args.conn_status is not False:
         print(' Getting network connection status...')
         gw.authenticate(username, password)
+        something_happened = True
         result = get_connection_status(gw)
         print(result)
+
+    # Query device
+    elif args.query is not None and args.query is not False:
+        gw.authenticate(username, password)
         something_happened = True
+        kv = args.query.split('=')
+        if len(kv) != 2:
+            print('Invalid filters!')
+        else:
+            if kv[0] == 'name':
+                d = gw.query_device(name=kv[1])
+                print(d.pretty())
+            elif kv[0] == 'part_name':
+                d = gw.query_device(part_name=kv[1])
+                print(d.pretty())
+            elif kv[0] == 'ipv4':
+                d = gw.query_device(ipv4=kv[1])
+                print(d.pretty())
+            elif kv[0] == 'ipv6':
+                d = gw.query_device(ipv6=kv[1])
+                print(d.pretty())
+            elif kv[0] == 'mac':
+                d = gw.query_device(mac=kv[1])
+                print(d.pretty())
 
     if something_happened:
         # Log out
@@ -258,6 +284,22 @@ if __name__ == '__main__':
         action='store_true',
         help=textwrap.dedent('''
         Show Network Setup Information (Advanced connection information)
+        ''')
+    )
+
+    parser.add_argument(
+        '--query', '-q',
+        action='store',
+        help=textwrap.dedent('''
+        If available, pull information on a device by a unique
+        identifier. Syntax: "--query <tag>=<value>"
+
+        Available Tags:
+            name - Search by full device name
+            part_name - Search by part of the device name
+            ipv4 - Search by the full IPv4 address
+            ipv6 - Search by the full IPv6 address
+            mac - Search by the full MAC address
         ''')
     )
 
