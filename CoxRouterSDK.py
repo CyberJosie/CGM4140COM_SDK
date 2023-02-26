@@ -3,6 +3,7 @@ import json
 from requests import session
 from bs4 import BeautifulSoup
 
+
 def cleanval(val: str) -> str:
     repl = {
         # ' ': '',
@@ -21,6 +22,18 @@ class CoxGatewaySDK:
         self.session_cookie = None
         self.sess = requests.session()
 
+        self.GET_headers = {
+            'Host': self.host,
+            'Cache-Control': 'max-age=0',
+            'Upgrade-Insecure-Requests': '1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Referer': 'http://{}'.format(self.host),
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'close',
+            'Cookie': self.session_cookie,
+        }
+
     def has_session(self) -> bool:
         return True if self.session_cookie != None else False
 
@@ -38,7 +51,7 @@ class CoxGatewaySDK:
             'Upgrade-Insecure-Requests': '1',
             'Origin': 'http://{}'.format(self.host),
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.78 Safari/537.36',
+            # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.78 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Referer': 'http://{}'.format(self.host),
             'Accept-Encoding': 'gzip, deflate',
@@ -75,22 +88,9 @@ class CoxGatewaySDK:
             print("You need to authenticate first!")
             return []
 
-        headers = {
-            'Host': self.host,
-            'Cache-Control': 'max-age=0',
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.78 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Referer': 'http://{}'.format(self.host),
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'close',
-            'Cookie': self.session_cookie,
-        }
-
         url = 'http://{}/connected_devices_computers.jst'.format(self.host)
         try:
-            r = self.sess.post(url, headers=headers)
+            r = self.sess.post(url, headers=self.GET_headers)
 
             soup = BeautifulSoup(str(r.content.decode()), 'html.parser')
 
@@ -208,22 +208,9 @@ class CoxGatewaySDK:
             print("You need to authenticate first!")
             return {}
 
-        headers = {
-            'Host': self.host,
-            'Cache-Control': 'max-age=0',
-            'Upgrade-Insecure-Requests': '1',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.5481.78 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Referer': 'http://{}'.format(self.host),
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'close',
-            'Cookie': self.session_cookie,
-        }
-
         try:
             url = 'http://{}/connection_status.jst'.format(self.host)
-            r = self.sess.get(url, headers=headers)
+            r = self.sess.get(url, headers=self.GET_headers)
 
             soup = BeautifulSoup(str(r.content.decode()), 'html.parser')
 
@@ -303,3 +290,76 @@ class CoxGatewaySDK:
             print('Error parsing status: {}'.format(e))
 
         return status
+
+    def wifi_credentials(self) -> dict:
+        """
+        Retrieve Wi-Fi Credentials for 2G and 5G networks.
+
+        """
+        creds = {
+            '2.4G': {
+
+            },
+            '5G': {
+
+            }
+        }
+        if not self.has_session():
+            print("You need to authenticate first!")
+            return {}
+
+        try:
+            url = 'http://{}/at_a_glance.jst'.format(self.host)
+            r = self.sess.get(url, headers=self.GET_headers)
+
+            soup = BeautifulSoup(str(r.content.decode()), 'html.parser')
+
+            creds['2.4G']['ssid'] = soup.find(
+                'span', id='wifissid24').find_next('span').text
+            creds['2.4G']['password'] = soup.find(
+                'span', id='wifipasskey24').find_next('span').text
+            creds['5G']['ssid'] = soup.find(
+                'span', id='wifissid5').find_next('span').text
+            creds['5G']['password'] = soup.find(
+                'span', id='wifipasskey5').find_next('span').text
+
+        except Exception as e:
+            print(e)
+        return creds
+
+    def credentials(self, network: str = '2.4') -> tuple:
+        creds = (None, None)
+        if '2' in network or network == '2.4':
+            creds[0] = self.wifi_credentials()['2.4G']['ssid']
+            creds[1] = self.wifi_credentials()['2.4G']['password']
+        elif '5' in network:
+            creds[0] = self.wifi_credentials()['5G']['ssid']
+            creds[1] = self.wifi_credentials()['5G']['password']
+        return creds
+
+    def software_version(self) -> dict:
+        """
+        Return router software version
+        """
+        version_info = {
+            'note': 'the web developer left notes calling their code a mess, dont blame me here.'
+        }
+
+        url = 'http://{}/software.jst'.format(self.host)
+        try:
+            r = self.sess.get(url, headers=self.GET_headers)
+            soup = BeautifulSoup(str(r.content.decode()), 'html.parser')
+
+            block = soup.find('div', class_='module forms')
+            for element in block.find_all('div', class_='form-row'):
+                value = cleanval(element.find('span', class_='value').text)
+
+                if 'Software Version:' in str(element):
+                    version_info['etma_docsis_version'] = value
+                elif 'Software Image Name:' in str(element):
+                    version_info['software_image_name'] = value
+                elif 'Advanced Services:' in str(element):
+                    version_info['advanced_services'] = value
+        except Exception as e:
+            print('Error while parsing version info: {}'.format(str(e)))
+        return version_info
