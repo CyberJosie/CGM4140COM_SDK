@@ -66,7 +66,7 @@ def get_connection_status(gw: Gateway) -> str:
 
     for k in list(data.keys()):
         # Network Name Tag
-        result += '{}[{}]{}\n'.format(
+        result += '{}[Network: {}]{}\n'.format(
             Fore.LIGHTCYAN_EX,
             k,
             Fore.RESET,
@@ -173,9 +173,8 @@ def main(args) -> None:
     if something_happened:
         # Log out
         gw.logout()
-
         finish = time.time()
-        print('Elapsed: {}s'.format(round(finish-start, 4)))
+        print(' Elapsed: {}s'.format(round(finish-start, 4)))
 
 
 if __name__ == '__main__':

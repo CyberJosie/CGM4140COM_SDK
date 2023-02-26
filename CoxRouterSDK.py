@@ -7,6 +7,7 @@ from requests import session
 from bs4 import BeautifulSoup
 from colorama import Fore
 
+
 def cleanval(val: str) -> str:
     repl = {
         # ' ': '',
@@ -42,7 +43,7 @@ class Device():
             c3=Fore.LIGHTBLUE_EX,
             r=Fore.RESET,
             cc=Fore.GREEN if self.connected else Fore.RED,
-            
+
 
             _1=self.name,
             _2='Yes' if self.connected else 'No',
@@ -207,7 +208,8 @@ class Gateway:
                         mac=mac_address))
                 except Exception as e:
                     if self.verbose:
-                        print(' A non-fatal exception occured while parsing a device: {}'.format(str(e)))
+                        print(
+                            ' A non-fatal exception occured while parsing a device: {}'.format(str(e)))
                     continue
 
             for odr in offline_device_rows:
@@ -248,7 +250,8 @@ class Gateway:
                         mac=mac_address))
                 except Exception as e:
                     if self.verbose:
-                        print(' A non-fatal exception occured while parsing a device: {}'.format(str(e)))
+                        print(
+                            ' A non-fatal exception occured while parsing a device: {}'.format(str(e)))
                     continue
         except Exception as e:
             print(' Error gathering devices: {}'.format(str(e)))
