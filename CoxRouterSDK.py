@@ -551,6 +551,50 @@ class Gateway:
             print('Error filtering host: {}'.format(str(e)))
         return success
 
+    def acl_status(self, network: int = 1) -> dict:
+        """
+        Show the current status of the MAC access control list for a wireless
+        network.
+
+        :param network: Network to show the status of
+                        Options:
+                        1 - 2.4GHz Network
+                        2 - 5GHz Network
+        """
+        status = {}
+
+        '''
+        POST /actionHandler/ajaxSet_wireless_network_configuration.jst HTTP/1.1
+        DNT: 1
+        '''
+        headers = {
+            'Host': self.host,
+            'Cache-Control': 'max-age=0',
+            'Upgrade-Insecure-Requests': '1',
+            'Accept': '*/*',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': self.full_host,
+            'Referer': '{}/wireless_network_configuration.jst'.format(self.full_host),
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',
+            'Cookie': self.session_cookie,
+        }
+        data = {
+            'configInfo': "{\"ssid_number\":\"2\",+\"target\":\"mac_ssid\"}"
+        }
+        url = '{}/actionHandler/ajaxSet_wireless_network_configuration.jst'.format(
+            self.full_host)
+        try:
+            r = self.sess.post(url, headers=headers, data=data)
+            jdata = json.loads(f.content.decode())
+        except Exception as e:
+            print(' Failed to get ACL status: {}'.format(
+                str(e)
+            ))
+        return status
+
     def block_device(self, mac: str, network: int) -> None:
         """
         Blocks access to the network for a single device by its
@@ -591,7 +635,7 @@ class Gateway:
                           will return the first device with a name containing
                           this substring. (not case sensitive.)
         """
-        
+
         # dev = None
         if not self.has_session():
             print(" You are unauthorized, start by authenticating.")
@@ -599,7 +643,6 @@ class Gateway:
 
         q_key = ''
         value = None
-        
 
         devices = self.devices()
 
@@ -626,6 +669,103 @@ class Gateway:
                     break
 
         return dev
+
+    def logs(self, mode: str , timeframe: str ) -> list:
+        """
+        Query gateway logs using the same paramaters available in the GUI
+        interface. The moe refers to the entry category, and the timeframe refers to
+        how old it is available in a few options.
+
+        :param mode: Entry category
+                     Options:
+                        * system
+                        * event
+                        * firewall
+        :param timeframe: Date range 
+                      Options:
+                        * today - Only today
+                        * yesterday - Only yesterday
+                        * week - This past week
+                        * month - This past month
+                        * 90 - The last 90 days
+        """
+        logs = []
+
+        url = '{}/actionHandler/ajax_troubleshooting_logs.jst'.format(
+            self.full_host)
+
+        headers = {
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Origin': self.full_host,
+            'Referer': '{}/troubleshooting_logs.jst'.format(self.full_host),
+            'Accept-Encoding': 'gzip, deflate',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cookie': self.session_cookie,
+            'Connection': 'close',
+        }
+
+        # Get the correct API input for mode
+        # If no matches, default is event
+        mode = mode.lower()
+        if mode == 'system':
+            mode = 'system'
+        elif mode == 'firewall':
+            mode = 'firewall'
+        else:
+            mode = 'event'
+
+        # Get correct API input for timeframe
+        # If not matches, default is today
+        timeframe = timeframe.lower()
+        if timeframe == 'yesterday':
+            timeframe = 'Yesterday'
+        elif timeframe == 'week':
+            timeframe = 'Last week'
+        elif timeframe == 'month':
+            timeframe = 'Last month'
+        elif timeframe == '90':
+            timeframe = 'Last 90 days'
+        else:
+            timeframe = 'Today'
+
+        data = {
+            'mode': mode,
+            'timef': timeframe,
+        }
+
+        if self.verbose:
+            print(' Log Mode: {}\n Log Period: {}'.format(
+                mode.title(), timeframe.replace('+', ' ').title(),))
+
+        try:
+            r = self.sess.post(url, headers=headers, data=data)
+            json_log_data = json.loads(r.content.decode())
+
+            if len(json_log_data) >=1:
+                for e in json_log_data:
+                    if mode != 'firewall':
+                        logs.append({
+                            'time': cleanval(e['time']),
+                            'level': cleanval(e['Level']),
+                            'text': cleanval(e['Des']),
+                        })
+                    else:
+                        logs.append({
+                            'time': cleanval(e['time']),
+                            'level': cleanval(e['Type']),
+                            'text': '{} (Src: {}, Dst: {}, Count: {})'.format(
+                                cleanval(e['Des']),
+                                cleanval(e['Source']),
+                                cleanval(e['Target']),
+                                cleanval(e['Count']),
+                            )
+                        })
+        except Exception as e:
+            print(' Failed retrieving logs: {}'.format(str(e)))
+
+        return logs
 
     def logout(self) -> bool:
         if self.verbose:

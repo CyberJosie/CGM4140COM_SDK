@@ -70,3 +70,13 @@ gwcli -a creds.txt --query ipv4=192.168.0.77
 # Search by the mac address
 gwcli -a creds.txt --query mac=XX:XX:XX:XX:XX:XX
 ```
+
+## Show Logs
+```
+# Show system logs today
+gwcli -a creds.txt --logs system:today
+# Show event logs for the past month
+gwcli -a creds.txt --logs event:month
+# Show firewall logs for the past 90 days
+gwcli -a creds.txt --logs firewall:90
+```

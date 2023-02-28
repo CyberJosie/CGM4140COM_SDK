@@ -87,6 +87,21 @@ def get_connection_status(gw: Gateway) -> str:
     return result
 
 
+def get_logs(gw: Gateway, mode: str, timeframe: str) -> str:
+    result = ''
+    logdata = gw.logs(mode=mode, timeframe=timeframe)
+    for l in logdata:
+        result += '{c2}{_1}{r} ({c1}{_2}{r}) {_3}\n'.format(
+            _1=l['time'],
+            _2=l['level'],
+            _3=l['text'],
+            c1=Fore.LIGHTCYAN_EX,
+            c2=Fore.LIGHTYELLOW_EX,
+            r=Fore.RESET,
+        )
+    return result
+
+
 def main(args) -> None:
     host = '192.168.0.1'
     https_enabled = False
@@ -174,12 +189,12 @@ def main(args) -> None:
 
     # Query device
     elif args.query is not None and args.query is not False:
-        gw.authenticate(username, password)
-        something_happened = True
         kv = args.query.split('=')
         if len(kv) != 2:
             print('Invalid filters!')
         else:
+            gw.authenticate(username, password)
+            something_happened = True
             if kv[0] == 'name':
                 d = gw.query_device(name=kv[1])
                 print(d.pretty())
@@ -195,6 +210,16 @@ def main(args) -> None:
             elif kv[0] == 'mac':
                 d = gw.query_device(mac=kv[1])
                 print(d.pretty())
+
+    elif args.logs is not None and args.logs is not False:
+        vals = args.logs.split(':')
+        if len(vals) != 2:
+            print(' Invalid filters!')
+        else:
+            gw.authenticate(username, password)
+            something_happened = True
+            result = get_logs(gw, mode=vals[0], timeframe=vals[1])
+            print(result)
 
     if something_happened:
         # Log out
@@ -218,7 +243,7 @@ if __name__ == '__main__':
         action='store',
         default='192.168.0.1',
         help=textwrap.dedent('''
-        IP address of the gateway, default is 192.168.0.1.
+IP address of the gateway, default is 192.168.0.1.
         ''')
     )
 
@@ -226,7 +251,7 @@ if __name__ == '__main__':
         '--username', '-u',
         action='store',
         help=textwrap.dedent('''
-        Username to authenticate with. Required in each command
+Username to authenticate with. Required in each command
         ''')
     )
 
@@ -234,7 +259,7 @@ if __name__ == '__main__':
         '--password', '-p',
         action='store',
         help=textwrap.dedent('''
-        Password to authenticate with. Required in each command
+Password to authenticate with. Required in each command
         ''')
     )
 
@@ -242,8 +267,8 @@ if __name__ == '__main__':
         '--auth-file', '-a',
         action='store',
         help=textwrap.dedent('''
-        Path to text file containing authentication credentials.
-        First line stores username, second line store password. 
+Path to text file containing authentication credentials.
+First line stores username, second line store password. 
         ''')
     )
 
@@ -251,7 +276,7 @@ if __name__ == '__main__':
         '--list-devices', '-ld',
         action='store_true',
         help=textwrap.dedent('''
-        Show all online and offline devices known by this gateway.
+Show all online and offline devices known by this gateway.
         ''')
     )
 
@@ -259,14 +284,14 @@ if __name__ == '__main__':
         '--connected', '-cd',
         action='store_true',
         help=textwrap.dedent('''
-        Show all online devices known by this gateway.
+Show all online devices known by this gateway.
         ''')
     )
     parser.add_argument(
         '--disconnected', '-dd',
         action='store_true',
         help=textwrap.dedent('''
-        Show all online devices known by this gateway.
+Show all online devices known by this gateway.
         ''')
     )
 
@@ -274,8 +299,8 @@ if __name__ == '__main__':
         '--conn-status', '-cs',
         action='store_true',
         help=textwrap.dedent('''
-        Show Connection Status (General connection info for main wired and
-        wireless networks)
+Show Connection Status (General connection info for main wired and
+wireless networks)
         ''')
     )
 
@@ -283,7 +308,7 @@ if __name__ == '__main__':
         '--net-setup', '-ns',
         action='store_true',
         help=textwrap.dedent('''
-        Show Network Setup Information (Advanced connection information)
+Show Network Setup Information (Advanced connection information)
         ''')
     )
 
@@ -291,15 +316,35 @@ if __name__ == '__main__':
         '--query', '-q',
         action='store',
         help=textwrap.dedent('''
-        If available, pull information on a device by a unique
-        identifier. Syntax: "--query <tag>=<value>"
+If available, pull information on a device by a unique
+identifier. Syntax: "--query <tag>=<value>"
 
-        Available Tags:
-            name - Search by full device name
-            part_name - Search by part of the device name
-            ipv4 - Search by the full IPv4 address
-            ipv6 - Search by the full IPv6 address
-            mac - Search by the full MAC address
+Available Tags:
+    name - Search by full device name
+    part_name - Search by part of the device name
+    ipv4 - Search by the full IPv4 address
+    ipv6 - Search by the full IPv6 address
+    mac - Search by the full MAC address
+        ''')
+    )
+
+    parser.add_argument(
+        '--logs', '-l',
+        action='store',
+        help=textwrap.dedent('''
+Pull logs. Syntax: "--logs <mode>:<timeframe>"
+
+Modes:
+    * event
+    * system
+    * firewall
+
+Timeframes:
+    * today - today only
+    * yesterday - yesterday only
+    * week - this past week
+    * month - this past month
+    * 90 - this past 90 days (max age)
         ''')
     )
 
@@ -307,7 +352,7 @@ if __name__ == '__main__':
         '--use-https', '-S',
         action='store_true',
         help=textwrap.dedent('''
-        Use the routers HTTPS web service (if available, not enabled by default)
+Use the routers HTTPS web service (if available, not enabled by default)
         ''')
     )
 
@@ -315,8 +360,8 @@ if __name__ == '__main__':
         '--verbose', '-v',
         action='store_true',
         help=textwrap.dedent('''
-        Run actions in verbose mode. Helpful for debugging
-        and looking cool.
+Run actions in verbose mode. Helpful for debugging
+and looking cool.
         ''')
     )
 
